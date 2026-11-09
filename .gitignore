@@ -1,0 +1,7 @@
+build/
+out/
+*.png
+!docs/*.png
+*.user
+*.suo
+.vs/

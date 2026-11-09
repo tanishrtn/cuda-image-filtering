@@ -197,7 +197,7 @@ STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 
 #endif//INCLUDE_STB_IMAGE_WRITE_H
 
-#ifndef STB_IMAGE_WRITE_IMPLEMENTATION
+#ifdef STB_IMAGE_WRITE_IMPLEMENTATION
 
 #ifdef _WIN32
 #ifndef _CRT_SECURE_NO_WARNINGS

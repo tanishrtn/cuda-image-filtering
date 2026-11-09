@@ -1,31 +1,69 @@
 # CUDA Image Filtering
 
-A C++ and CUDA implementation of a GPU-accelerated 3x3 box-blur filter. The CUDA kernel processes each output pixel in parallel and writes the filtered result as a PNG.
+A portable C++17 image-blur application with an NVIDIA CUDA acceleration path, a CPU fallback, automatic backend selection, measurable execution time, and automated reference tests.
 
-## Tech stack
+## What works
 
-- C++
-- NVIDIA CUDA
-- `stb_image` / `stb_image_write`
+- Loads common image formats with `stb_image`
+- Applies a boundary-safe 3×3 box blur to RGB pixels
+- Uses 16×16 CUDA thread blocks when a compatible GPU is available
+- Falls back to the same deterministic CPU algorithm on systems without CUDA
+- Reports the selected backend and processing time
+- Writes the filtered image as PNG
+- Builds with CMake on Linux, macOS, and Windows
 
-## How it works
+## Processing flow
 
-1. Loads an input image as RGB data.
-2. Copies the image to GPU memory.
-3. Runs a CUDA kernel with 16x16 thread blocks.
-4. Applies a 3x3 box blur with boundary checks.
-5. Copies the result back to the CPU and writes a PNG file.
-
-## Build and run
-
-Open `image.slnx` in Visual Studio with CUDA support, then build the project. From the executable directory:
-
-```bash
-image_filter input.jpg output.png
+```text
+Input image -> RGB decode -> backend selection -> 3x3 blur -> PNG output
+                                    |                |
+                              CUDA kernel       CPU reference
 ```
 
-> An NVIDIA GPU and a CUDA-enabled Visual Studio toolchain are required to build and run this project.
+## Build
 
-## Notes
+Requires CMake 3.20+ and a C++17 compiler. CUDA is detected automatically.
 
-This repository contains the CUDA implementation currently available in the project source. It does not include MPI/distributed-processing code.
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+```
+
+If the CUDA toolkit is installed, CMake builds the GPU implementation. Otherwise it produces a fully functional CPU build.
+
+## Run
+
+```bash
+./build/image_filter input.pgm output.png
+./build/image_filter input.jpg output.png --backend=cuda
+./build/image_filter input.jpg output.png --backend=cpu
+```
+
+`--backend=auto` is the default. Explicitly requesting CUDA returns a clear error when no compatible device is available.
+
+## Test
+
+```bash
+ctest --test-dir build --output-on-failure
+```
+
+The reference test checks exact pixel values for a known 2×2 RGB image. GitHub Actions builds the CPU fallback, executes the test, and processes the included sample image on every push and pull request.
+
+## Repository map
+
+```text
+main.cpp                    CLI, image I/O, backend selection, timing
+blur.cu                     CUDA kernel and checked memory operations
+blur_cpu.cpp                Portable reference implementation
+blur_stub.cpp               Non-CUDA build adapter
+blur.h                      Shared interface
+tests/test_blur_cpu.cpp     Deterministic pixel test
+CMakeLists.txt              Portable conditional CUDA build
+.github/workflows/ci.yml    Automated build and test
+```
+
+The older Visual Studio project files remain available for reference, but CMake is the supported build path.
+
+## Scope and limitations
+
+This project implements a box blur, not a full image-processing library. GPU performance depends on image size, transfer overhead, hardware, compiler settings, and warm-up behavior. No speedup is claimed without measuring both backends on the same system.
